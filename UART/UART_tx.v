@@ -1,0 +1,79 @@
+module uart_tx(
+    input clk,
+    input rst,
+    input tx_start,
+    input [7:0] tx_data,
+
+    output reg tx,
+    output reg tx_done
+);
+
+reg [3:0] bit_index;
+reg [7:0] data_reg;
+reg [1:0] state;
+
+parameter IDLE  = 2'b00;
+parameter START = 2'b01;
+parameter DATA  = 2'b10;
+parameter STOP  = 2'b11;
+
+always @(posedge clk or posedge rst)
+begin
+
+    if(rst)
+    begin
+        state <= IDLE;
+        tx <= 1;
+        tx_done <= 0;
+        bit_index <= 0;
+    end
+
+    else
+    begin
+
+        tx_done <= 0;
+
+        case(state)
+
+        IDLE:
+        begin
+            tx <= 1;
+
+            if(tx_start)
+            begin
+                data_reg <= tx_data;
+                bit_index <= 0;
+                state <= START;
+            end
+        end
+
+        START:
+        begin
+            tx <= 0;
+            state <= DATA;
+        end
+
+        DATA:
+        begin
+            tx <= data_reg[bit_index];
+
+            if(bit_index == 7)
+                state <= STOP;
+            else
+                bit_index <= bit_index + 1;
+        end
+
+        STOP:
+        begin
+            tx <= 1;
+            tx_done <= 1;
+            state <= IDLE;
+        end
+
+        endcase
+
+    end
+
+end
+
+endmodule
